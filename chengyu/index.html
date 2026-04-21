@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成语接龙</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .game-title {
+            text-align: center;
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .current-section {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .current-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .current-idiom {
+            font-size: 42px;
+            font-weight: 700;
+            color: #667eea;
+            letter-spacing: 8px;
+        }
+
+        .input-section {
+            margin-bottom: 25px;
+        }
+
+        .input-hint {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        .idiom-input {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+            text-align: center;
+            letter-spacing: 4px;
+        }
+
+        .idiom-input:focus {
+            border-color: #667eea;
+        }
+
+        .idiom-input::placeholder {
+            letter-spacing: 2px;
+            color: #ccc;
+        }
+
+        .submit-btn {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.error {
+            background: #fee;
+            color: #c00;
+            border: 1px solid #fcc;
+            display: block;
+        }
+
+        .message.success {
+            background: #efe;
+            color: #060;
+            border: 1px solid #cfc;
+            display: block;
+        }
+
+        .history-section {
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .history-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .history-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .history-item .user-idiom {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .history-item .arrow {
+            margin: 0 15px;
+            color: #ccc;
+            font-size: 20px;
+        }
+
+        .history-item .ai-idiom {
+            color: #764ba2;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .history-item .timestamp {
+            margin-left: auto;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .empty-history {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .reset-btn {
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+            padding: 12px;
+            font-size: 14px;
+            color: #888;
+            background: transparent;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .reset-btn:hover {
+            color: #667eea;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="game-title">🎯 成语接龙</h1>
+        
+        <div class="current-section">
+            <div class="current-label">当前成语</div>
+            <div class="current-idiom" id="currentIdiom">一心一意</div>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div class="input-section">
+            <div class="input-hint">请输入以上面成语最后一个字开头的成语</div>
+            <div class="input-wrapper">
+                <input type="text" 
+                       class="idiom-input" 
+                       id="idiomInput" 
+                       placeholder="输入成语"
+                       maxlength="4"
+                       autocomplete="off">
+                <button class="submit-btn" id="submitBtn">接龙</button>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="history-title">📜 接龙记录</div>
+            <div class="history-list" id="historyList">
+                <div class="empty-history">还没有接龙记录，快来开始吧！</div>
+            </div>
+            <button class="reset-btn" id="resetBtn">🔄 重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        // API 基础地址（使用相对路径，前后端同服务器）
+        const API_BASE = '';
+
+        // 获取DOM元素
+        const currentIdiomEl = document.getElementById('currentIdiom');
+        const idiomInput = document.getElementById('idiomInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const messageEl = document.getElementById('message');
+        const historyList = document.getElementById('historyList');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // 显示消息
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type;
+            setTimeout(() => {
+                messageEl.className = 'message';
+            }, 3000);
+        }
+
+        // 更新历史记录列表
+        function updateHistory(history) {
+            if (!history || history.length === 0) {
+                historyList.innerHTML = '<div class="empty-history">还没有接龙记录，快来开始吧！</div>';
+                return;
+            }
+
+            historyList.innerHTML = history.map(item => `
+                <div class="history-item">
+                    <span class="user-idiom">${item.user}</span>
+                    <span class="arrow">→</span>
+                    <span class="ai-idiom">${item.ai}</span>
+                    <span class="timestamp">${item.timestamp}</span>
+                </div>
+            `).join('');
+        }
+
+        // 设置加载状态
+        function setLoading(loading) {
+            submitBtn.disabled = loading;
+            submitBtn.innerHTML = loading 
+                ? '<span class="loading"></span>思考中' 
+                : '接龙';
+        }
+
+        // 提交成语
+        async function submitIdiom() {
+            const idiom = idiomInput.value.trim();
+            
+            if (!idiom) {
+                showMessage('请输入成语', 'error');
+                return;
+            }
+
+            if (idiom.length !== 4) {
+                showMessage('请输入4字成语', 'error');
+                return;
+            }
+
+            setLoading(true);
+            messageEl.className = 'message';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/play`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ idiom: idiom })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showMessage(data.error, 'error');
+                } else if (data.success) {
+                    currentIdiomEl.textContent = data.current_idiom;
+                    showMessage(`太棒了！AI接：${data.sdk_response}`, 'success');
+                    idiomInput.value = '';
+                    updateHistory(data.history);
+                } else {
+                    showMessage(data.error || '出错了，请重试', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请检查后端服务是否启动', 'error');
+                console.error('Error:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 重置游戏
+        async function resetGame() {
+            try {
+                const response = await fetch(`${API_BASE}/api/reset`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    currentIdiomEl.textContent = data.current_idiom;
+                    historyList.innerHTML = '<div class="empty-history">还没有接龙记录，快来开始吧！</div>';
+                    showMessage('游戏已重置！', 'success');
+                }
+            } catch (error) {
+                console.error('Reset error:', error);
+                showMessage('重置失败，请重试', 'error');
+            }
+        }
+
+        // 事件绑定
+        submitBtn.addEventListener('click', submitIdiom);
+        resetBtn.addEventListener('click', resetGame);
+
+        idiomInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitIdiom();
+            }
+        });
+
+        // 初始化聚焦输入框
+        idiomInput.focus();
+    </script>
+</body>
+</html>
