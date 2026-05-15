@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动物世界 - 视频生成</title>
+    <style>
+        /* ===== 全局样式重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* ===== 页面基础样式 ===== */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            /* 自然森林渐变背景 */
+            background: linear-gradient(135deg, #1a3d2e 0%, #2d5a3f 30%, #1e4d35 70%, #0f2d1f 100%);
+            color: #f5f5f0;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* ===== 背景装饰元素 ===== */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            /* 树叶纹理叠加效果 */
+            background-image: 
+                radial-gradient(ellipse 80px 60px at 10% 20%, rgba(45, 90, 63, 0.4) 0%, transparent 70%),
+                radial-gradient(ellipse 100px 80px at 85% 15%, rgba(45, 90, 63, 0.3) 0%, transparent 70%),
+                radial-gradient(ellipse 60px 100px at 90% 80%, rgba(45, 90, 63, 0.4) 0%, transparent 70%),
+                radial-gradient(ellipse 70px 50px at 5% 90%, rgba(45, 90, 63, 0.3) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 底部草地装饰 */
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: linear-gradient(to top, rgba(30, 77, 53, 0.8) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ===== 主容器 ===== */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== 页面标题 ===== */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #e8dcc8;
+            text-shadow: 2px 4px 8px rgba(0, 0, 0, 0.4);
+            letter-spacing: 8px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #a8c5b0;
+            letter-spacing: 2px;
+        }
+
+        /* 标题装饰线 */
+        .header::after {
+            content: '';
+            display: block;
+            width: 120px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #c4a574, transparent);
+            margin: 20px auto 0;
+        }
+
+        /* ===== 输入区域 ===== */
+        .input-section {
+            background: rgba(15, 45, 31, 0.7);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(196, 165, 116, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 16px 20px;
+            font-size: 1rem;
+            border: 2px solid rgba(196, 165, 116, 0.4);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #f5f5f0;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input::placeholder {
+            color: #7a9a82;
+        }
+
+        .input-group input:focus {
+            border-color: #c4a574;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 20px rgba(196, 165, 116, 0.2);
+        }
+
+        .input-group button {
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a3d2e;
+            background: linear-gradient(135deg, #c4a574 0%, #d4b584 50%, #c4a574 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(196, 165, 116, 0.3);
+        }
+
+        .input-group button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(196, 165, 116, 0.5);
+            background: linear-gradient(135deg, #d4b584 0%, #e4c594 50%, #d4b584 100%);
+        }
+
+        .input-group button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .input-group button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 提示文字 */
+        .input-hint {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #7a9a82;
+        }
+
+        /* ===== 加载状态 ===== */
+        .loading-section {
+            text-align: center;
+            padding: 60px 20px;
+            display: none;
+        }
+
+        .loading-section.active {
+            display: block;
+        }
+
+        /* 自然风格加载动画 */
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            position: relative;
+        }
+
+        /* 地球/动物轮廓 */
+        .loading-spinner::before {
+            content: '🦁';
+            font-size: 60px;
+            display: block;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                transform: scale(1); 
+                opacity: 0.7;
+            }
+            50% { 
+                transform: scale(1.1); 
+                opacity: 1;
+            }
+        }
+
+        /* 环绕的叶子 */
+        .loading-spinner::after {
+            content: '🍃';
+            font-size: 24px;
+            position: absolute;
+            top: -5px;
+            right: -10px;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(15deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            color: #a8c5b0;
+            margin-bottom: 8px;
+        }
+
+        .loading-hint {
+            font-size: 0.9rem;
+            color: #6a8a72;
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            width: 300px;
+            max-width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin: 20px auto 0;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #c4a574, #e8dcc8);
+            border-radius: 2px;
+            animation: progress 3s ease-in-out infinite;
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+
+        /* ===== 视频展示区 ===== */
+        .video-section {
+            display: none;
+        }
+
+        .video-section.active {
+            display: block;
+            animation: fadeIn 0.6s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .video-container {
+            background: rgba(15, 45, 31, 0.8);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(196, 165, 116, 0.3);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .video-container video {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+        }
+
+        .video-description {
+            margin-top: 20px;
+            padding: 16px 20px;
+            background: rgba(196, 165, 116, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #c4a574;
+        }
+
+        .video-description-label {
+            font-size: 0.85rem;
+            color: #c4a574;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .video-description-text {
+            font-size: 1rem;
+            color: #e8dcc8;
+            line-height: 1.6;
+        }
+
+        /* ===== 错误提示 ===== */
+        .error-section {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(139, 69, 69, 0.3);
+            border-radius: 16px;
+            border: 1px solid rgba(180, 80, 80, 0.4);
+        }
+
+        .error-section.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .error-title {
+            font-size: 1.2rem;
+            color: #e8a0a0;
+            margin-bottom: 8px;
+        }
+
+        .error-message {
+            font-size: 0.95rem;
+            color: #b08080;
+        }
+
+        .error-section button {
+            margin-top: 20px;
+            padding: 10px 24px;
+            font-size: 0.9rem;
+            color: #1a3d2e;
+            background: linear-gradient(135deg, #c4a574 0%, #d4b584 100%);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .error-section button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(196, 165, 116, 0.4);
+        }
+
+        /* ===== 响应式设计 ===== */
+        @media (max-width: 640px) {
+            .container {
+                padding: 30px 16px 60px;
+            }
+
+            .header h1 {
+                font-size: 2.2rem;
+                letter-spacing: 4px;
+            }
+
+            .header p {
+                font-size: 0.95rem;
+            }
+
+            .input-section {
+                padding: 20px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .input-group button {
+                width: 100%;
+            }
+
+            .video-container {
+                padding: 12px;
+            }
+        }
+
+        /* ===== 空状态 ===== */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #6a8a72;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+
+        .empty-state-text {
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 页面标题 -->
+        <header class="header">
+            <h1>动物世界</h1>
+            <p>探索自然 · 发现生命的奇迹</p>
+        </header>
+
+        <!-- 输入区域 -->
+        <section class="input-section">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="animalInput" 
+                    placeholder="输入一种动物，如：非洲草原上的狮子"
+                    autocomplete="off"
+                >
+                <button type="button" id="generateBtn">生成视频</button>
+            </div>
+            <p class="input-hint">💡 支持中英文描述，视频生成可能需要30秒以上，请耐心等待</p>
+        </section>
+
+        <!-- 加载状态 -->
+        <section class="loading-section" id="loadingSection">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">正在生成视频...</p>
+            <p class="loading-hint">AI 正在创作中，请稍候</p>
+            <div class="progress-bar">
+                <div class="progress-bar-fill"></div>
+            </div>
+        </section>
+
+        <!-- 空状态 -->
+        <section class="empty-state" id="emptyState">
+            <div class="empty-state-icon">🌿</div>
+            <p class="empty-state-text">在上方输入动物描述，开启你的自然探索之旅</p>
+        </section>
+
+        <!-- 错误提示 -->
+        <section class="error-section" id="errorSection">
+            <div class="error-icon">⚠️</div>
+            <p class="error-title">生成失败</p>
+            <p class="error-message" id="errorMessage">发生了未知错误，请稍后重试</p>
+            <button type="button" id="retryBtn">重试</button>
+        </section>
+
+        <!-- 视频展示区 -->
+        <section class="video-section" id="videoSection">
+            <div class="video-container">
+                <video id="videoPlayer" controls playsinline>
+                    您的浏览器不支持视频播放
+                </video>
+            </div>
+            <div class="video-description">
+                <p class="video-description-label">📝 您输入的描述</p>
+                <p class="video-description-text" id="descriptionText"></p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        /**
+         * 动物世界 - 视频生成前端交互逻辑
+         * 负责与后端 Flask API 交互，管理界面状态转换
+         */
+
+        // ===== DOM 元素引用 =====
+        const animalInput = document.getElementById('animalInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const loadingSection = document.getElementById('loadingSection');
+        const emptyState = document.getElementById('emptyState');
+        const errorSection = document.getElementById('errorSection');
+        const errorMessage = document.getElementById('errorMessage');
+        const videoSection = document.getElementById('videoSection');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const descriptionText = document.getElementById('descriptionText');
+        const retryBtn = document.getElementById('retryBtn');
+
+        // ===== 状态管理 =====
+        let isGenerating = false;  // 防止重复提交
+        let lastDescription = '';  // 保存上次输入，用于重试
+
+        /**
+         * 显示指定区域，隐藏其他区域
+         * @param {string} mode - 'loading' | 'empty' | 'error' | 'video'
+         */
+        function showSection(mode) {
+            // 隐藏所有区域
+            loadingSection.classList.remove('active');
+            emptyState.style.display = 'none';
+            errorSection.classList.remove('active');
+            videoSection.classList.remove('active');
+
+            // 根据模式显示对应区域
+            switch (mode) {
+                case 'loading':
+                    loadingSection.classList.add('active');
+                    break;
+                case 'empty':
+                    emptyState.style.display = 'block';
+                    break;
+                case 'error':
+                    errorSection.classList.add('active');
+                    break;
+                case 'video':
+                    videoSection.classList.add('active');
+                    break;
+            }
+        }
+
+        /**
+         * 设置输入框和按钮的可用状态
+         * @param {boolean} disabled - 是否禁用
+         */
+        function setInputState(disabled) {
+            animalInput.disabled = disabled;
+            generateBtn.disabled = disabled;
+            isGenerating = disabled;
+        }
+
+        /**
+         * 显示错误信息
+         * @param {string} message - 错误消息
+         */
+        function showError(message) {
+            errorMessage.textContent = message || '发生了未知错误，请稍后重试';
+            showSection('error');
+            setInputState(false);
+        }
+
+        /**
+         * 调用后端 API 生成视频
+         * @returns {Promise<void>}
+         */
+        async function generateVideo() {
+            // 获取用户输入
+            const description = animalInput.value.trim();
+
+            // 输入验证
+            if (!description) {
+                animalInput.focus();
+                return;
+            }
+
+            // 保存描述用于可能的重试
+            lastDescription = description;
+
+            // 更新 UI 状态
+            showSection('loading');
+            setInputState(true);
+
+            try {
+                // 发送请求到后端
+                const response = await fetch('/generate-video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ input: description })
+                });
+
+                // 解析响应
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // HTTP 错误状态
+                    throw new Error(data.error || `请求失败 (${response.status})`);
+                }
+
+                if (!data.success) {
+                    // 业务逻辑错误
+                    throw new Error(data.error || '视频生成失败');
+                }
+
+                // 成功：显示视频
+                if (data.video_url) {
+                    videoPlayer.src = data.video_url;
+                    descriptionText.textContent = data.description || description;
+                    showSection('video');
+                } else {
+                    throw new Error('未收到视频地址');
+                }
+
+            } catch (error) {
+                // 捕获并显示错误
+                console.error('生成视频失败:', error);
+                showError(error.message || '网络错误，请检查连接后重试');
+            } finally {
+                // 恢复输入状态（仅在非视频显示状态时）
+                if (!videoSection.classList.contains('active')) {
+                    setInputState(false);
+                }
+            }
+        }
+
+        /**
+         * 重试上次操作
+         */
+        function retry() {
+            if (lastDescription) {
+                animalInput.value = lastDescription;
+            }
+            generateVideo();
+        }
+
+        // ===== 事件绑定 =====
+
+        // 点击生成按钮
+        generateBtn.addEventListener('click', () => {
+            if (!isGenerating) {
+                generateVideo();
+            }
+        });
+
+        // 输入框回车触发生成
+        animalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !isGenerating) {
+                e.preventDefault();
+                generateVideo();
+            }
+        });
+
+        // 重试按钮
+        retryBtn.addEventListener('click', retry);
+
+        // 视频播放出错处理
+        videoPlayer.addEventListener('error', () => {
+            showError('视频加载失败，请稍后重试');
+        });
+
+        // 页面加载完成，显示空状态
+        document.addEventListener('DOMContentLoaded', () => {
+            showSection('empty');
+        });
+    </script>
+</body>
+</html>
